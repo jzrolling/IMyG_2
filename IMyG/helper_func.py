@@ -4,6 +4,7 @@ __author__ = "jz-rolling"
 # 09/15/19
 
 import numpy as np
+import pandas as pd
 import cmath
 from math import pi
 from matplotlib import pyplot as plt
@@ -15,7 +16,6 @@ from scipy.interpolate import splprep, splev, RectBivariateSpline
 import warnings
 import IMyG.config as conf
 from itertools import combinations
-from numba import jit
 
 
 def plot_spectrum(im_fft):
@@ -668,7 +668,6 @@ def straighten_cell(img,mask,midline,\
 def straighten_cell_normalize_width(img,width,midline,\
                                     subpixel = 1/conf.sample_density,\
                                     remove_cap = 5,\
-                                    remove_background = False,\
                                     pad = 3):
     decapped_midline = midline[remove_cap+1:-remove_cap-1]
     decapped_width = width[remove_cap:-remove_cap]
@@ -677,8 +676,6 @@ def straighten_cell_normalize_width(img,width,midline,\
     width_normalized_dxy = unit_dxy*(np.vstack([normalization_factor,normalization_factor]).T)
     data = bilinear_interpolate_numpy(img,decapped_midline.T[0],decapped_midline.T[1])
     copied_img = img.copy()
-    if remove_background:
-        copied_img[mask == 0] = 0
     for i in range(1,int(decapped_width.mean()*0.5/subpixel)+pad):
         dxy = width_normalized_dxy*i
         v1 = decapped_midline+dxy
@@ -687,3 +684,10 @@ def straighten_cell_normalize_width(img,width,midline,\
         p2 = bilinear_interpolate_numpy(copied_img,v2.T[0],v2.T[1])
         data = np.vstack([p1,data,p2])
     return (data)
+
+
+def generate_96_well_plate():
+    rows = ["A","B","C","D","E","F","G","G"]
+    columns = np.linspace(1,12,12).astype(int)
+    plate = pd.DataFrame(0,index=rows,columns=columns)
+    return(plate)
