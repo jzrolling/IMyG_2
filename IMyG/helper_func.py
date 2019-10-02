@@ -691,3 +691,11 @@ def generate_96_well_plate():
     columns = np.linspace(1,12,12).astype(int)
     plate = pd.DataFrame(0,index=rows,columns=columns)
     return(plate)
+
+def vector_plot(data,ax,transverse = False):
+    if data.shape[1] == 2:
+        data = data.T
+    if not transverse:
+        ax.plot(data[1],data[0],color = 'salmon',alpha = 0.5)
+    else:
+        ax.plot(data[0],data[1],color = 'salmon',alpha = 0.5)

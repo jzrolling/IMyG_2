@@ -80,15 +80,26 @@ def data_dump_txt(image,output_path,header):
     data.close()
 
 def data_dump_image(image,output_path,header):
-    tifffile.imsave(output_path+header+"phase_bg_filtered.tif",\
+    tifffile.imsave(output_path+header+"_phase_bg_filtered.tif",\
                     image.ph_filtered.astype(np.uint16),imagej = True)
-    tifffile.imsave(output_path + header + "phase_mask.tif", \
+    tifffile.imsave(output_path + header + "_phase_mask.tif", \
                     (image.ph_binary*1*254).astype(np.uint8), imagej=True)
     for channel,fl_image in image.fl_img.items():
         tifffile.imsave(output_path + header + channel+"_bg_filtered.tif",\
                         fl_image.astype(np.uint16), imagej=True)
 
-def process_nd2(nd2file,output_path,header):
+def data_dump_sample_cells(image,output_path,header,max_number = 5):
+    counter = 0
+    for cell in image.cells:
+        if counter >= max_number:
+            break
+        if cell.cell_label == 0:
+            length = cell.length
+            if conf.sample_cell_min_length < length < conf.sample_cell_max_length:
+                cell.plot_advanced(image,savefig=True,output_path=output_path,header=header)
+                counter += 1
+
+def process_nd2(nd2file,output_path,header,sample_cells = True):
     nd = image.image(nd2file)
     nd.preprocess_ph()
     nd.preprocess_fl()
@@ -99,7 +110,18 @@ def process_nd2(nd2file,output_path,header):
     # print function for later
     data_dump_txt(nd,output_path,header)
     data_dump_image(nd,output_path,header)
+    if sample_cells:
+        data_dump_sample_cells(nd,output_path,header)
 
+def process_nd2_no_output(nd2file):
+    nd = image.image(nd2file)
+    nd.preprocess_ph()
+    nd.preprocess_fl()
+    nd.raw_segmentation()
+    nd.process_microcolonies()
+    nd.optimize_single_cells()
+    nd.measure()
+    return(nd)
 
 
 
