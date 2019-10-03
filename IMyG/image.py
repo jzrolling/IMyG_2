@@ -29,7 +29,8 @@ class image():
         self.cells = []
         self.microcolonies = []
         self.shape = None
-        self.global_fl_background = []
+        self.global_fl_bg_mean = {}
+        self.global_fl_bg_std = {}
 
         if image_type == "nd2":
             img = nd2.Nd2(input_file)
@@ -82,8 +83,9 @@ class image():
         self.shape_indexed_smoothed = filters.median(self.shape_indexed,morphology.disk(1)).astype(np.uint8)
         #self.shape_indexed_smoothed = filters.median(self.shape_indexed)
         for channel in self.channels:
-            self.global_fl_background[channel] = round(np.average(self.fl_img[channel][self.ph_binary == 0]),1)
-
+            bg = self.fl_img[channel][self.ph_binary == 0]
+            self.global_fl_bg_mean[channel] = round(np.average(bg),1)
+            self.global_fl_bg_std[channel] = round(np.std(bg),1)
 
     def process_microcolonies(self):
         warnings.filterwarnings("ignore")
@@ -102,7 +104,7 @@ class image():
             try:
                 cell.skeleton_optimization()
             except:
-                print("Error found while optimizing skeleton!")
+                #print("Error found while optimizing skeleton!")
                 cell.is_good_baby = False
 
     def measure(self):
@@ -111,5 +113,7 @@ class image():
             try:
                 cell.measure(self)
             except:
-                print("Error found!")
+                #print("Error found!")
                 cell.is_good_baby = False
+
+

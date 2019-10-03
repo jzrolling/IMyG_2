@@ -45,6 +45,7 @@ class cell:
         self.mean_fl_intensity = {}
         self.phase_straighten = []
         self.fl_straighten = {}
+        self.SNR = {}
         self.measured = False
         if not self.branched:
             if self.robust_length > 2:
@@ -254,6 +255,7 @@ class cell:
                     croped_data = data[x1:x2,y1:y2]
                     self.measure_along_midline[channel] = measure_along_line(self.midline,croped_data)
                     self.mean_fl_intensity[channel] = croped_data[self.mask > 0].mean()
+                    self.SNR[channel] = self.mean_fl_intensity[channel]/image.global_fl_bg_mean[channel]
                     if contour:
                         self.measure_along_contour[channel] = measure_along_line(self.optimized_contour[0], croped_data)
                     if straighten:

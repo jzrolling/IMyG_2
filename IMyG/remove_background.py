@@ -50,34 +50,34 @@ def Rolling_ball_bg_subtraction(data,radius = 40):
     output_data[output_data<=0] = 0
     return(output_data.astype(np.uint16))
     
-        
+
 @jit(nopython=True)
-def shrink_img_local_min(image,shrink_factor=4):
+def shrink_img_local_min(image, shrink_factor=4):
     s = shrink_factor
-    r,c = image.shape[0],image.shape[0]
-    r_s,c_s = int(r/s),int(c/s)
-    shrk_img = np.ones((r_s,c_s))
+    r, c = image.shape[0], image.shape[0]
+    r_s, c_s = int(r / s), int(c / s)
+    shrk_img = np.ones((r_s, c_s))
     for x in range(r_s):
         for y in range(c_s):
-            shrk_img[x,y] = image[x*s:x*s+s,y*s:y*s+s].min()
+            shrk_img[x, y] = image[x * s:x * s + s, y * s:y * s + s].min()
     return shrk_img
 
 
 @jit(nopython=True)
-def rolling_ball_bg(image,ball):
+def rolling_ball_bg(image, ball):
     width = ball.shape[0]
-    radius = int(width/2)
+    radius = int(width / 2)
     peak = ball.max()
-    r,c = image.shape[0],image.shape[1]
-    bg = np.ones((r,c)).astype(np.float32)
-    #ignore edges to begin with
+    r, c = image.shape[0], image.shape[1]
+    bg = np.ones((r, c)).astype(np.float32)
+    # ignore edges to begin with
     for x in range(r):
         for y in range(c):
-            x1,x2,y1,y2 = max(x-radius,0),min(x+radius+1,r),max(y-radius,0),min(y+radius+1,c)
-            cube = image[x1:x2,y1:y2]
-            cropped_ball = ball[radius-(x-x1):radius+(x2-x),radius-(y-y1):radius+(y2-y)]
-            bg_cropped = bg[x1:x2,y1:y2]
-            bg_mask = ((cube-cropped_ball).min())+cropped_ball
-            bg[x1:x2,y1:y2] = bg_cropped*(bg_cropped>=bg_mask)+bg_mask*(bg_cropped<bg_mask)
-    return(bg)
+            x1, x2, y1, y2 = max(x - radius, 0), min(x + radius + 1, r), max(y - radius, 0), min(y + radius + 1, c)
+            cube = image[x1:x2, y1:y2]
+            cropped_ball = ball[radius - (x - x1):radius + (x2 - x), radius - (y - y1):radius + (y2 - y)]
+            bg_cropped = bg[x1:x2, y1:y2]
+            bg_mask = ((cube - cropped_ball).min()) + cropped_ball
+            bg[x1:x2, y1:y2] = bg_cropped * (bg_cropped >= bg_mask) + bg_mask * (bg_cropped < bg_mask)
+    return (bg)
 

@@ -85,7 +85,7 @@ def data_dump_image(image,output_path,header):
     tifffile.imsave(output_path + header + "_phase_mask.tif", \
                     (image.ph_binary*1*254).astype(np.uint8), imagej=True)
     for channel,fl_image in image.fl_img.items():
-        tifffile.imsave(output_path + header + channel+"_bg_filtered.tif",\
+        tifffile.imsave(output_path + header +"_"+ channel+"_bg_filtered.tif",\
                         fl_image.astype(np.uint16), imagej=True)
 
 def data_dump_sample_cells(image,output_path,header,max_number = 5):
