@@ -221,8 +221,8 @@ class cell:
             fl_lateral = fig.add_subplot(gs[6 + 2 * channel_counter:6 + 2 * channel_counter + 2, -2:])
             lateral_data = self.fl_straighten[channel]
             mean, std = lateral_data[0], lateral_data[1]
-            maxwidth = self.width.max() * self.pixel_microns
-            x_lateral = np.linspace(-0.5 * maxwidth, 0.5 * maxwidth, len(mean))
+            meanwidth = self.width.mean() * self.pixel_microns
+            x_lateral = np.linspace(-0.5 * meanwidth, 0.5 * meanwidth, len(mean))
             fl_lateral.plot(x_lateral, mean)
             fl_lateral.fill_between(x_lateral, mean - std, mean + std, alpha=0.1)
             fl_lateral.get_yaxis().tick_right()

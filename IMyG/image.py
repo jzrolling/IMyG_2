@@ -29,6 +29,7 @@ class image():
         self.cells = []
         self.microcolonies = []
         self.shape = None
+        self.global_fl_background = []
 
         if image_type == "nd2":
             img = nd2.Nd2(input_file)
@@ -80,6 +81,9 @@ class image():
         self.microcolony_info = init_Segmentation(self.ph_filtered)
         self.shape_indexed_smoothed = filters.median(self.shape_indexed,morphology.disk(1)).astype(np.uint8)
         #self.shape_indexed_smoothed = filters.median(self.shape_indexed)
+        for channel in self.channels:
+            self.global_fl_background[channel] = round(np.average(self.fl_img[channel][self.ph_binary == 0]),1)
+
 
     def process_microcolonies(self):
         warnings.filterwarnings("ignore")

@@ -668,7 +668,7 @@ def straighten_cell(img,mask,midline,\
 def straighten_cell_normalize_width(img,width,midline,\
                                     subpixel = 1/conf.sample_density,\
                                     remove_cap = 5,\
-                                    pad = 3):
+                                    pad = 0):
     decapped_midline = midline[remove_cap+1:-remove_cap-1]
     decapped_width = width[remove_cap:-remove_cap]
     unit_dxy = unit_perpendicular_vector(decapped_midline)*subpixel
