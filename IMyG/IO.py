@@ -1,13 +1,13 @@
 __author__ = "jz-rolling"
 
-import nd2reader as nd2
 import tifffile
-import os
+import os,glob
+import multiprocessing as mp
 import re
 import numpy as np
 from IMyG.helper_func import *
 from IMyG import image
-import timeit
+import pickle as pk
 
 def data_dump_txt(image,output_path,header):
     with open(output_path+header+"_data.txt",'w') as data:
@@ -89,8 +89,11 @@ def data_dump_image(image,output_path,header):
                         fl_image.astype(np.uint16), imagej=True)
 
 def data_dump_sample_cells(image,output_path,header,max_number = 5):
+    idx_list = np.arange(len(image.cells))
+    np.random.shuffle(idx_list)
     counter = 0
-    for cell in image.cells:
+    for i in idx_list:
+        cell = image.cells[i]
         if counter >= max_number:
             break
         if cell.cell_label == 0:
@@ -113,8 +116,8 @@ def process_nd2(nd2file,output_path,header,sample_cells = True):
     if sample_cells:
         data_dump_sample_cells(nd,output_path,header)
 
-def process_nd2_no_output(nd2file):
-    nd = image.image(nd2file)
+def process_nd2_no_output(nd2file,plate_idx=0):
+    nd = image.image(nd2file,plate_index=plate_idx)
     nd.preprocess_ph()
     nd.preprocess_fl()
     nd.raw_segmentation()
@@ -123,6 +126,12 @@ def process_nd2_no_output(nd2file):
     nd.measure()
     return(nd)
 
-
-
+def pickel_dump(nd2file, output_path, header, plate_idx, sample_cells = True):
+    nd = process_nd2_no_output(nd2file,plate_idx = plate_idx)
+    # print function for later
+    data_dump_image(nd,output_path,header)
+    output = "{}{}_sample_{}_cells.pk".format(output_path,header,plate_idx)
+    pk.dump(nd.cells, open(output, "wb"))
+    if sample_cells:
+        data_dump_sample_cells(nd,output_path,header)
 

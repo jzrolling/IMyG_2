@@ -15,6 +15,9 @@ class cell:
         self.phase = image.ph_filtered[x1:x2, y1:y2].copy()
         self.sobel = image.sobel[x1:x2, y1:y2].copy()
         self.shape_indexed = image.shape_indexed_smoothed[x1:x2, y1:y2].copy()
+        self.fl_img = {}
+        for channel,data in image.fl_img.items():
+            self.fl_img[channel] = data[x1:x2,y1:y2]
         self.mask = labeled_binary
         self.init_contour = None
         self.init_polygon = None
@@ -32,6 +35,7 @@ class cell:
         self.min_length = image.min_length
         self.skeleton_robust()
         self.perimeter = self.regionprop[0].perimeter
+        self.perimeter_precise = 0
         self.solidity = self.regionprop[0].solidity
         self.eccentricity = self.regionprop[0].eccentricity
         self.robust_length =  self.skeleton.sum()
@@ -47,6 +51,7 @@ class cell:
         self.fl_straighten = {}
         self.SNR = {}
         self.measured = False
+        self.plate_idx = image.plate_idx
         if not self.branched:
             if self.robust_length > 2:
                 dist = distance(self.skeleton_path[0], self.skeleton_path[-1])
@@ -128,22 +133,22 @@ class cell:
             skeleton = self.midline[:-1]
             dskeleton = self.midline[1:] - self.midline[:-1]
             fig = plt.figure(figsize=(4,4))
-            plt.imshow(self.phase,cmap = "gist_gray")
+            plt.imshow(self.phase, cmap = "gist_gray")
             for i in range(len(contour)):
                 x,y = contour[i][0],contour[i][1]
                 dx,dy = dcontour[i][0],dcontour[i][1]
-                plt.arrow(y,x,dy,dx,color = "lightcoral",alpha = 0.5)
+                plt.arrow(y, x, dy, dx, color="lightcoral", alpha = 0.5)
             if plot_skeleton:
                 for j in range(len(skeleton)):
-                    m,n = skeleton[j][0],skeleton[j][1]
-                    dm,dn = dskeleton[j][0],dskeleton[j][1]
-                    plt.arrow(n,m,dn,dm,color="lightcoral",alpha=0.5)
+                    m,n = skeleton[j][0], skeleton[j][1]
+                    dm,dn = dskeleton[j][0], dskeleton[j][1]
+                    plt.arrow(n, m, dn, dm, color="lightcoral", alpha=0.5)
             if savefig:
-                if output_path == None:
+                if output_path is None:
                     print("No output directory assigned.")
                 else:
                     try:
-                        fig.savefig(output_path+"%d_%d.png"%(self.colony_label,self.cell_label))
+                        fig.savefig(output_path+"%d_%d.png"%(self.colony_label, self.cell_label))
                         plt.close()
                     except:
                         print("Could not find output director: %s"(output_path))
@@ -151,10 +156,10 @@ class cell:
         else:
             print("I'm sorry that our current plot function does not support drawing cells with apparent abnormalties.")
 
-    def plot_advanced(self,image,savefig = False,output_path = None,header = "%"):
+    def plot_advanced(self, image, savefig=False, output_path=None, header="%"):
         from matplotlib.gridspec import GridSpec
         if not self.measured:
-            self.measure(image,contour = False)
+            self.measure(image, contour=False)
         transverse = False
         (h, w) = self.mask.shape
         if h < w:
@@ -234,37 +239,40 @@ class cell:
             channel_counter += 1
 
         if savefig:
-            if output_path == None:
+            if output_path is None:
                 print("No output directory assigned.")
             else:
                 try:
-                    fig.savefig(output_path + header + "_%d_%d_extensive_plot.png" % (self.colony_label, self.cell_label))
+                    fig.savefig(output_path + header + "_%d_%d_%d_extensive_plot.png" % (self.plate_idx,\
+                                                                                         self.colony_label,\
+                                                                                         self.cell_label))
                     plt.close()
                 except:
                     print("Could not find output director: %s"(output_path))
                     plt.close()
 
-
-    def measure(self,image,midline = True,contour = True,straighten = True):
+    def measure(self, image, midline=True, contour=True, straighten=True):
         x1,y1,x2,y2 = self.bbox
         if midline:
-            self.measure_along_midline["Shape_indexed"] = measure_along_line(self.midline,self.shape_indexed)
-            self.measure_along_midline["Phase"] = measure_along_line(self.midline,self.phase)
-            if len(image.fl_img) != 0:
-                for channel,data in image.fl_img.items():
-                    croped_data = data[x1:x2,y1:y2]
-                    self.measure_along_midline[channel] = measure_along_line(self.midline,croped_data)
-                    self.mean_fl_intensity[channel] = croped_data[self.mask > 0].mean()
+            self.measure_along_midline["Shape_indexed"] = measure_along_line(self.midline, self.shape_indexed)
+            self.measure_along_midline["Phase"] = measure_along_line(self.midline, self.phase)
+            if len(self.fl_img) != 0:
+                for channel,data in self.fl_img.items():
+                    self.measure_along_midline[channel] = measure_along_line(self.midline, data)
+                    self.mean_fl_intensity[channel] = data[self.mask > 0].mean()
                     self.SNR[channel] = self.mean_fl_intensity[channel]/image.global_fl_bg_mean[channel]
                     if contour:
-                        self.measure_along_contour[channel] = measure_along_line(self.optimized_contour[0], croped_data)
+                        self.measure_along_contour[channel] = measure_along_line(self.optimized_contour[0], data)
                     if straighten:
-                        width_normalized_data = straighten_cell_normalize_width(croped_data,self.width,self.midline)
-                        w_average,w_std = np.average(width_normalized_data,axis = 1),\
-                                          np.std(width_normalized_data,axis = 1)
-                        h_average,h_std = np.average(width_normalized_data,axis = 0),\
-                                          np.std(width_normalized_data,axis = 0)
-                        self.fl_straighten[channel] = [w_average,w_std,h_average,h_std]
-        self.perimeter_precise = measure_length(self.optimized_contour[0],self.pixel_microns)
+                        width_normalized_data = straighten_cell_normalize_width(data, self.width, self.midline)
+                        w_average, w_std = np.average(width_normalized_data,axis=1), \
+                                           np.std(width_normalized_data,axis=1)
+                        h_average, h_std = np.average(width_normalized_data, axis=0), \
+                                           np.std(width_normalized_data, axis=0)
+                        self.fl_straighten[channel] = [w_average, w_std, h_average, h_std]
+        self.perimeter_precise = measure_length(self.optimized_contour[0], self.pixel_microns)
         self.measured = True
+
+    def fl_feature_extraction(self):
+        return None
 
