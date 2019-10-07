@@ -699,3 +699,11 @@ def vector_plot(data,ax,transverse = False):
         ax.plot(data[1],data[0],color = 'salmon',alpha = 0.5)
     else:
         ax.plot(data[0],data[1],color = 'salmon',alpha = 0.5)
+
+def moving_window_average(data,window_size = 5):
+    if len(data) <= window_size+2:
+        raise ValueError("Input array does not have enough values")
+    else:
+        cum_sum = np.cumsum(np.insert(data,0,0))
+        return ((cum_sum[window_size:]-cum_sum[:-window_size])/float(window_size))
+
