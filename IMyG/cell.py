@@ -38,7 +38,7 @@ class cell:
         self.perimeter_precise = 0
         self.solidity = self.regionprop[0].solidity
         self.eccentricity = self.regionprop[0].eccentricity
-        self.robust_length =  self.skeleton.sum()
+        self.robust_length = self.skeleton.sum()
         self.robust_length_micron = self.robust_length * image.pixel_microns
         self.sphericity = 2*self.area / (pi* (self.robust_length ** 2))
         self.curvature = 0
