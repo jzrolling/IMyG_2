@@ -82,7 +82,7 @@ class image():
             fl_bg_subtracted = Rolling_ball_bg_subtraction(data)
             if normalize:
                 fl_bg_subtracted = normalize_img(normalize_img,adjust_gamma=adjust_gamma,gamma=gamma)
-            self.fl_img[channel] = fl_bg_subtracted
+            self.fl_img[channel] = filters.gaussian(fl_bg_subtracted,sigma=0.5)*65535
             #del fl_bg_subtracted
 
     def raw_segmentation(self):

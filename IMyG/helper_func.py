@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 from scipy import ndimage as ndi
 from scipy import fftpack
-from skimage import morphology, feature, measure, filters, segmentation, util, exposure
+from skimage import morphology, feature, measure, filters, segmentation, util, exposure,draw
 from scipy.interpolate import splprep, splev, RectBivariateSpline
 import warnings
 import IMyG.config as conf
@@ -214,6 +214,10 @@ def angle(p1,p2,p3):
     return angle
 
 def bilinear_interpolate_numpy(im, x, y):
+    h,l = im.shape
+    padded = np.zeros((h+1,l+1))
+    padded[:h,:l] += im
+    im = padded
     x0 = x.astype(int)
     x1 = x0 + 1
     y0 = y.astype(int)
@@ -647,11 +651,19 @@ def unit_perpendicular_vector(data):
     dxy_unit = dxy_perp/np.vstack([vector_length,vector_length]).T
     return(dxy_unit)
 
+def unit_perpendicular_vector_angle(data):
+    dxy = data[1:]-data[:-1]
+    dxy_comp = np.angle(dxy.T[0]*1+dxy.T[1]*1j)+0.5*pi
+    dx,dy = np.cos(dxy_comp),np.sin(dxy_comp)
+    dxy_perp = np.vstack([dx,dy]).T
+    dxy_perp = np.concatenate((dxy_perp,[dxy_perp[-1]]),axis=0)
+    return(dxy_perp)
+
 def straighten_cell(img,mask,midline,\
                        subpixel = 0.5,\
                        half_width_by_pixel = 8,\
                        remove_background = False):
-    unit_dxy = unit_perpendicular_vector(midline)*subpixel
+    unit_dxy = unit_perpendicular_vector_angle(midline)*subpixel
     data = bilinear_interpolate_numpy(img,midline.T[0],midline.T[1])
     copied_img = img.copy()
     if remove_background:
@@ -669,20 +681,23 @@ def straighten_cell_normalize_width(img,width,midline,\
                                     subpixel = 1/conf.sample_density,\
                                     remove_cap = 5,\
                                     pad = 0):
-    decapped_midline = midline[remove_cap+1:-remove_cap-1]
-    decapped_width = width[remove_cap:-remove_cap]
-    unit_dxy = unit_perpendicular_vector(decapped_midline)*subpixel
-    normalization_factor = decapped_width/decapped_width.mean()
-    width_normalized_dxy = unit_dxy*(np.vstack([normalization_factor,normalization_factor]).T)
-    data = bilinear_interpolate_numpy(img,decapped_midline.T[0],decapped_midline.T[1])
+    decapped_midline = midline[remove_cap + 1:-remove_cap - 1]
+    if remove_cap > 0:
+        decapped_width = width[remove_cap:-remove_cap].copy()
+    else:
+        decapped_width = width.copy()
+    unit_dxy = unit_perpendicular_vector_angle(decapped_midline) * subpixel
+    normalization_factor = decapped_width / decapped_width.max()
+    width_normalized_dxy = unit_dxy * (np.vstack([normalization_factor, normalization_factor]).T)
+    data = bilinear_interpolate_numpy(img, decapped_midline.T[0], decapped_midline.T[1])
     copied_img = img.copy()
-    for i in range(1,int(decapped_width.mean()*0.5/subpixel)+pad):
-        dxy = width_normalized_dxy*i
-        v1 = decapped_midline+dxy
-        v2 = decapped_midline-dxy
-        p1 = bilinear_interpolate_numpy(copied_img,v1.T[0],v1.T[1])
-        p2 = bilinear_interpolate_numpy(copied_img,v2.T[0],v2.T[1])
-        data = np.vstack([p1,data,p2])
+    for i in range(1, int(decapped_width.mean() * 0.5 / subpixel) + pad):
+        dxy = width_normalized_dxy * i
+        v1 = decapped_midline + dxy
+        v2 = decapped_midline - dxy
+        p1 = bilinear_interpolate_numpy(copied_img, v1.T[0], v1.T[1])
+        p2 = bilinear_interpolate_numpy(copied_img, v2.T[0], v2.T[1])
+        data = np.vstack([p1, data, p2])
     return (data)
 
 
@@ -707,3 +722,92 @@ def moving_window_average(data,window_size = 5):
         cum_sum = np.cumsum(np.insert(data,0,0))
         return ((cum_sum[window_size:]-cum_sum[:-window_size])/float(window_size))
 
+
+def generate_96_well_plate():
+    rows = ["A","B","C","D","E","F","G","H"]
+    columns = np.linspace(1,12,12).astype(int)
+    plate = pd.DataFrame(0,index=rows,columns=columns)
+    return(plate)
+
+def create_canvas(width=101, height=600):
+    canvas = np.zeros((width, height))
+    r = int(width / 2)
+    rr1, cc1 = draw.ellipse(r, int(r * 1.6), r, int((r) * 1.6))
+    rr2, cc2 = draw.ellipse(r, int(height - 1.6 * r), r, int((r) * 1.6))
+    rr3, cc3 = draw.rectangle(start=(1, int(r * 1.6)), end=(width - 2, height - int(r * 1.6)), shape=canvas.shape)
+    canvas[rr3, cc3] = 1
+    canvas[rr1, cc1] = 1
+    canvas[rr2, cc2] = 1
+    l = len(np.nonzero(np.sum(canvas, axis=0))[0])
+    counter = 0
+    canvas = canvas.T
+    return canvas
+
+
+def create_mesh(canvas):
+    xt, yt = np.nonzero(canvas)
+    l, m = np.sum(canvas, axis=0), np.sum(canvas, axis=1)
+    norm_yt = np.zeros(xt.shape)
+    norm_xt = (xt - xt.min()) / (l.max() - 1)
+    count = 0
+    for i in range(len(xt)):
+        r = m.max() / m[xt[i]]
+        norm_yt[i] = count * r / (m.max() - 1)
+        if i != len(xt) - 1:
+            if xt[i + 1] == xt[i]:
+                count += 1
+            else:
+                count = 0
+        else:
+            count += 1
+    return (xt, yt, norm_xt, norm_yt)
+
+
+def project_image(xt, yt, norm_xt, norm_yt, canvas, data):
+    paint = np.zeros(canvas.shape)
+    xid = norm_xt.copy()
+    yid = norm_yt.copy()
+    xid *= data.shape[0] - 1
+    yid *= data.shape[1] - 1
+    interpolated = bilinear_interpolate_numpy(data, xid, yid)
+    paint[xt, yt] = interpolated
+    return (paint)
+
+def center_of_mass(data,xcor):
+    center = np.sum((data)*xcor)/np.sum((data))
+    return np.round(center,3)
+
+def normalize_data(data, percentile=0.1, re_align=False, max = True, max_th = 0.7):
+    half_l = int(0.5 * data.shape[1])
+    if data[:, :half_l].mean() < data[:, -half_l:].mean():
+        if re_align:
+            data = np.flip(data, axis=1)
+    th_low = np.percentile(data, percentile)
+    normalized_data = (data - th_low) / (data.max() - th_low)
+    normalized_data[normalized_data > 1] = 1
+    normalized_data[normalized_data < 0] = 0
+    if max:
+        normalized_data[normalized_data<max_th] = 0
+        #normalized_data[normalized_data>=max_th] = 1
+    #normalized_data = subtract_alignment_bias(normalized_data)
+    return normalized_data
+
+
+def group_by_length(length,groups = [3,4,5,6]):
+    if length < groups[0]:
+        return 1
+    elif length < groups[1]:
+        return 2
+    elif length < groups[2]:
+        return 3
+    elif length < groups[3]:
+        return 4
+    else:
+        return 5
+
+def subtract_alignment_bias(data,adjust_factor = 0.968):
+    half = int(0.5*data.shape[1])
+    corrected_data = data.copy()
+    corrected_data[:,:half] *= adjust_factor
+    corrected_data[:,-half:] /= adjust_factor
+    return corrected_data

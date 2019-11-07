@@ -1,11 +1,14 @@
 __author__ = "jz-rolling"
 
-from IMyG.helper_func import *
+#from IMyG.helper_func import *
 from IMyG.cell import *
 import IMyG.config as conf
 
 
 class microcolony:
+    """
+
+    """
     def __init__(self, image, microcolony_regionprop):
         self.bbox = optimize_bbox(image.shape,microcolony_regionprop.bbox)
         (x1, y1, x2, y2) = self.bbox
@@ -21,9 +24,8 @@ class microcolony:
                      high_bound=conf.shape_index_threshould_high,\
                      apply_median_filter = True):
         x1, y1, x2, y2 = self.bbox
-        #canvas = np.zeros((x2 - x1, y2 - y1))
         if apply_median_filter:
-            #use smoothed shape-indexed image
+            # use smoothed shape-indexed image
             self.shape_indexed = image.shape_indexed_smoothed[x1:x2, y1:y2].copy()* (self.mask > 0)
         else:
             self.shape_indexed = image.shape_indexed[x1:x2, y1:y2].copy()* (self.mask > 0)
