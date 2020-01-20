@@ -374,9 +374,12 @@ def project_by_percentile(folder,pks,header,channel,all_cells = True,re_align = 
             well_paints[i] = normalized
     painttttt = np.concatenate(well_paints,axis = 1)
     fig = plt.figure(figsize=(8,8))
+    ax = fig.add_subplot(111)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
     plt.imshow(painttttt,cmap = "viridis")
     for outline in optimized_outline:
-        plt.plot(outline.T[1],outline.T[0],c="salmon",alpha = 0.5)
+        ax.plot(outline.T[1],outline.T[0],c="salmon",alpha = 0.5)
     fig.savefig(folder+"projection_{}.png".format(header),\
                 bbox_inches = "tight")
     plt.close

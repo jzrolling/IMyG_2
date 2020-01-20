@@ -60,6 +60,7 @@ class image():
                       adjust_gamma = True,gamma = 1.0,\
                       ph_high_pass = conf.ph_high_pass,\
                       ph_low_pass = conf.ph_low_pass):
+
         ph_fft = fft(self.ph_img.copy(),subtract_mean=True)
         ph_fft_filters = bandpass_filter(pixel_microns = self.pixel_microns,\
                                          img_width=self.shape[0],img_height=self.shape[1],\
@@ -81,7 +82,7 @@ class image():
             #fl_bg_subtracted[fl_bg_subtracted<=0] = 0
             fl_bg_subtracted = Rolling_ball_bg_subtraction(data)
             if normalize:
-                fl_bg_subtracted = normalize_img(normalize_img,adjust_gamma=adjust_gamma,gamma=gamma)
+                fl_bg_subtracted = normalize_img(fl_bg_subtracted,adjust_gamma=adjust_gamma,gamma=gamma)
             self.fl_img[channel] = filters.gaussian(fl_bg_subtracted,sigma=0.5)*65535
             #del fl_bg_subtracted
 
@@ -92,6 +93,8 @@ class image():
         self.microcolony_info = init_Segmentation(self.ph_filtered)
         self.shape_indexed_smoothed = filters.median(self.shape_indexed,morphology.disk(1)).astype(np.uint8)
         #self.shape_indexed_smoothed = filters.median(self.shape_indexed)
+
+
         for channel,data in self.fl_img.items():
             bg = data[self.ph_binary == 0]
             self.global_fl_bg_mean[channel] = round(np.average(bg),1)
